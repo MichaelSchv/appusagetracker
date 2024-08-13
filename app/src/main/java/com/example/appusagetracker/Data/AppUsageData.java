@@ -65,16 +65,51 @@ public class AppUsageData {
                 }
             }
         }
+
+        // Sort the list by usage time in descending order
+        Collections.sort(appUsageInfoList, new Comparator<AppUsageInfo>() {
+            @Override
+            public int compare(AppUsageInfo o1, AppUsageInfo o2) {
+                return Long.compare(o2.getUsageTimeInMillis(), o1.getUsageTimeInMillis());
+            }
+        });
+
         return appUsageInfoList;
     }
+
 
     public static class AppUsageInfo {
         private String appName;
         private long usageTimeInMillis;
+        private String packageName;
+        private Drawable appIcon;
 
-        public AppUsageInfo(String appName, long usageTimeInMillis) {
+        public AppUsageInfo(String appName,String packageName, Drawable appIcon, long usageTimeInMillis) {
             this.appName = appName;
             this.usageTimeInMillis = usageTimeInMillis;
+            this.packageName = packageName;
+            this.appIcon = appIcon;
+        }
+
+        public AppUsageInfo() {
+            this.appName = null;
+            this.usageTimeInMillis = 0;
+            this.appIcon = null;
+        }
+
+        public AppUsageInfo setAppName(String appName) {
+            this.appName = appName;
+            return this;
+        }
+
+        public AppUsageInfo setUsageTimeInMillis(long usageTimeInMillis) {
+            this.usageTimeInMillis = usageTimeInMillis;
+            return this;
+        }
+
+        public AppUsageInfo setAppIcon(Drawable appIcon) {
+            this.appIcon = appIcon;
+            return this;
         }
 
         public String getAppName() {
@@ -90,6 +125,10 @@ public class AppUsageData {
                     TimeUnit.MILLISECONDS.toHours(usageTimeInMillis),
                     TimeUnit.MILLISECONDS.toMinutes(usageTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
                     TimeUnit.MILLISECONDS.toSeconds(usageTimeInMillis) % TimeUnit.MINUTES.toSeconds(1));
+        }
+
+        public Drawable getAppIcon() {
+            return appIcon;
         }
     }
 }

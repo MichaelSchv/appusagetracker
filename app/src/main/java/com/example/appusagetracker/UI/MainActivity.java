@@ -2,6 +2,7 @@ package com.example.appusagetracker.UI;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 
 import com.example.appusagetracker.Data.AppUsageData;
 import com.example.appusagetracker.R;
@@ -16,7 +17,10 @@ import com.github.mikephil.charting.utils.ColorTemplate;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -38,6 +42,9 @@ public class MainActivity extends AppCompatActivity {
     private MaterialTextView card_LBL_name;
     private MaterialTextView card_LBL_usage;
     private AppUsageData appUsageData;
+    private long otherUsageTime = 0;
+    private long totalScreenOffTime=0;
+    private final long TOTAL_MILLIS_IN_DAY = 86400000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         appUsageData = new AppUsageData(this);
         findViews();
+
         setupPieChart();
 
         if (!appUsageData.hasUsageStatsPermission()) {
@@ -65,34 +73,43 @@ public class MainActivity extends AppCompatActivity {
                 cardViewLayout.setVisibility(View.GONE);
             }
         });
+
     }
 
     private void showCardView(PieEntry entry) {
         String selectedAppName = entry.getLabel();
         AppUsageData.AppUsageInfo selectedAppInfo = null;
 
-        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageData.getAppUsageStats()) {
-            if (appUsageInfo.getAppName().equals(selectedAppName)) {
-                selectedAppInfo = appUsageInfo;
-                break;
+        if("Other".equals(selectedAppName)){
+            selectedAppInfo = new AppUsageData.AppUsageInfo();
+            selectedAppInfo.setAppName("Other");
+            selectedAppInfo.setUsageTimeInMillis(otherUsageTime);
+            selectedAppInfo.setAppIcon(ContextCompat.getDrawable(this,R.drawable.other));
+        }
+        else if ("Screen Off".equals(selectedAppName)) {
+            selectedAppInfo = new AppUsageData.AppUsageInfo();
+            selectedAppInfo.setAppName("Screen Off");
+            selectedAppInfo.setUsageTimeInMillis(totalScreenOffTime);
+            selectedAppInfo.setAppIcon(ContextCompat.getDrawable(this,R.drawable.blackscreen));
+        }
+        else
+        {
+            for (AppUsageData.AppUsageInfo appUsageInfo : appUsageData.getAppUsageStats()) {
+                if (appUsageInfo.getAppName().equals(selectedAppName)) {
+                    selectedAppInfo = appUsageInfo;
+                    break;
+                }
             }
         }
-
         if (selectedAppInfo != null) {
             usage_CRD_cardContainer.setVisibility(View.VISIBLE);
-            card_LBL_name.setText(selectedAppName);
+            card_LBL_name.setText(selectedAppInfo.getAppName()); // Correct name
             card_LBL_usage.setText("Time: " + selectedAppInfo.getFormattedUsageTime());
-            try {
-                Drawable appIconDrawable = getPackageManager().getApplicationIcon(selectedAppInfo.getAppName());
-                card_IMG_icon.setImageDrawable(appIconDrawable);
-            }
-            catch (PackageManager.NameNotFoundException e) {
-                card_IMG_icon.setImageResource(R.drawable.ic_launcher_background);
-            }
-
+            card_IMG_icon.setImageDrawable(selectedAppInfo.getAppIcon()); // Correct icon
             cardViewLayout.setVisibility(View.VISIBLE);
         }
     }
+
 
     private void setupPieChart() {
         usage_CRT_piechart.setDrawHoleEnabled(true);
@@ -110,13 +127,34 @@ public class MainActivity extends AppCompatActivity {
 
     private void loadPieChartData() {
         List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats();
-
         ArrayList<PieEntry> entries = new ArrayList<>();
+        long totalUsageTime = 0;
+        double thresholdPercentage = 0.01; // 1% threshold
 
+        // Calculate total usage time
         for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
-            entries.add(new PieEntry(appUsageInfo.getUsageTimeInMillis(), appUsageInfo.getAppName()));
+            totalUsageTime += appUsageInfo.getUsageTimeInMillis();
         }
 
+        if(totalScreenOffTime > 0)
+            entries.add(new PieEntry(totalScreenOffTime, "Screen Off"));
+
+        // Group small usage times into "Other"
+        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
+            double usagePercentage = (double) appUsageInfo.getUsageTimeInMillis() / totalUsageTime;
+            if (usagePercentage < thresholdPercentage) {
+                otherUsageTime += appUsageInfo.getUsageTimeInMillis();
+            } else {
+                entries.add(new PieEntry(appUsageInfo.getUsageTimeInMillis(), appUsageInfo.getAppName()));
+            }
+        }
+
+        // Add the "Other" category if necessary
+        if (otherUsageTime > 0) {
+            entries.add(new PieEntry(otherUsageTime, "Other"));
+        }
+
+        // Create the PieDataSet and PieData
         PieDataSet dataSet = new PieDataSet(entries, "App Usage");
         dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
         PieData data = new PieData(dataSet);
@@ -125,8 +163,9 @@ public class MainActivity extends AppCompatActivity {
         data.setValueTextColor(android.R.color.black);
 
         usage_CRT_piechart.setData(data);
-        usage_CRT_piechart.invalidate();
+        usage_CRT_piechart.invalidate(); // Refresh the chart
     }
+
 
     private void findViews() {
         usage_CRT_piechart = findViewById(R.id.usage_CRT_piechart);
