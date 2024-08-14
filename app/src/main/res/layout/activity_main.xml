@@ -16,23 +16,53 @@
         android:textStyle="bold"
         android:textColor="@color/black"
         android:layout_centerHorizontal="true"
+        android:gravity="center"
         android:layout_marginTop="16dp"/>
 
-    <androidx.appcompat.widget.AppCompatSpinner
-        android:id="@+id/usage_SPN_timeSelector"
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/usage_LLC_spinnerAndButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:layout_below="@id/usage_LBL_title"
         android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:padding="10dp">
+
+        <androidx.appcompat.widget.AppCompatSpinner
+            android:id="@+id/usage_SPN_timeSelector"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:layout_marginTop="8dp"
+            android:spinnerMode="dropdown"
+            android:entries="@array/time_period_options" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/usage_BTN_limit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="10dp"
+            android:text="Limit App"/>
+    </androidx.appcompat.widget.LinearLayoutCompat>
+
+    <CheckBox
+        android:id="@+id/usage_CHBX_screenOff"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Include Screen Off Times"
+        android:textColor="@color/black"
+        android:textStyle="bold"
+        android:layout_below="@id/usage_LLC_spinnerAndButton"
+        android:layout_centerHorizontal="true"
         android:layout_marginTop="8dp"
-        android:spinnerMode="dropdown"
-        android:entries="@array/time_period_options" />
+        android:checked="true"/>
 
     <com.github.mikephil.charting.charts.PieChart
         android:id="@+id/usage_CRT_piechart"
         android:layout_width="match_parent"
         android:layout_height="400dp"
-        android:layout_below="@id/usage_SPN_timeSelector"
+        android:layout_below="@id/usage_CHBX_screenOff"
         android:layout_marginTop="16dp"
         android:padding="10dp"/>
 
@@ -42,6 +72,5 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/usage_CRT_piechart"
         android:layout_marginTop="16dp"/>
-
 
 </RelativeLayout>

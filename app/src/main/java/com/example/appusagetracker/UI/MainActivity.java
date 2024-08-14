@@ -15,6 +15,7 @@ import com.github.mikephil.charting.data.PieEntry;
 import com.github.mikephil.charting.highlight.Highlight;
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener;
 import com.github.mikephil.charting.utils.ColorTemplate;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 
@@ -31,6 +32,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
@@ -45,7 +48,10 @@ public class MainActivity extends AppCompatActivity {
     private ShapeableImageView card_IMG_icon;
     private MaterialTextView card_LBL_name;
     private MaterialTextView card_LBL_usage;
+    private CheckBox usage_CHBX_screenOff;
     private AppCompatSpinner usage_SPN_timeSelector;
+
+    private MaterialButton usage_BTN_limit;
 
 
 
@@ -63,14 +69,27 @@ public class MainActivity extends AppCompatActivity {
         appUsageData = new AppUsageData(this);
         findViews();
         handleSpinner();
-
         setupPieChart();
 
-        if (!appUsageData.hasUsageStatsPermission()) {
-            startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
-        } else {
-            loadPieChartData("Daily");
-        }
+        usage_BTN_limit.setOnClickListener(v->{
+            Intent intent = new Intent(MainActivity.this, LimitActivity.class);
+            startActivity(intent);
+        });
+        usage_CHBX_screenOff.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (!appUsageData.hasUsageStatsPermission()) {
+                    startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+                } else {
+                    clearPieChartHighlight();
+                    hideCardView();
+                    String timePeriod = usage_SPN_timeSelector.getSelectedItem().toString();
+                    loadPieChartData(timePeriod);
+                }
+            }
+        });
+
+
 
         usage_CRT_piechart.setOnChartValueSelectedListener(new OnChartValueSelectedListener(){
 
@@ -95,6 +114,8 @@ public class MainActivity extends AppCompatActivity {
         usage_SPN_timeSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                clearPieChartHighlight();
+                hideCardView();
                 String selectedItem = parent.getItemAtPosition(position).toString();
                 loadPieChartData(selectedItem);
             }
@@ -156,14 +177,14 @@ public class MainActivity extends AppCompatActivity {
         usage_CRT_piechart.setEntryLabelTextSize(12);
         usage_CRT_piechart.setEntryLabelColor(android.R.color.black);
         usage_CRT_piechart.setCenterText("App Usage");
-        usage_CRT_piechart.setCenterTextSize(24);
+        usage_CRT_piechart.setCenterTextSize(15);
         usage_CRT_piechart.getDescription().setEnabled(false);
         usage_CRT_piechart.setRotationEnabled(false);
         usage_CRT_piechart.getLegend().setEnabled(false);
         usage_CRT_piechart.setHighlightPerTapEnabled(true);
     }
 
-    private void loadPieChartData(String timePeriod) {
+    /*private void loadPieChartData(String timePeriod) {
         List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats(timePeriod);
         ArrayList<PieEntry> entries = new ArrayList<>();
         long totalUsageTime = 0;
@@ -183,9 +204,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         totalScreenOffTime = periodMillis - totalUsageTime;
-        if(totalScreenOffTime > 0)
+        if(totalScreenOffTime > 0 && usage_CHBX_screenOff.isChecked())
+        {
             entries.add(new PieEntry(totalScreenOffTime, "Screen Off"));
+        }
 
+        int[] colors = getCustomColors();
         // Group small usage times into "Other"
         for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
             double usagePercentage = (double) appUsageInfo.getUsageTimeInMillis() / totalUsageTime;
@@ -201,9 +225,68 @@ public class MainActivity extends AppCompatActivity {
             entries.add(new PieEntry(otherUsageTime, "Other"));
         }
 
+        entries.sort((e1,e2)-> Float.compare(e2.getValue(), e1.getValue()));
+
         // Create the PieDataSet and PieData
         PieDataSet dataSet = new PieDataSet(entries, "App Usage");
-        dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        dataSet.setColors(colors);
+        PieData data = new PieData(dataSet);
+        data.setDrawValues(true);
+        data.setValueTextSize(12f);
+        data.setValueTextColor(android.R.color.black);
+
+        usage_CRT_piechart.setData(data);
+        usage_CRT_piechart.invalidate(); // Refresh the chart
+    }*/
+
+    private void loadPieChartData(String timePeriod) {
+        // Fetch fresh app usage data for the selected time period
+        List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats(timePeriod);
+        ArrayList<PieEntry> entries = new ArrayList<>();
+        long totalUsageTime = 0;
+        double thresholdPercentage = 0.01; // 1% threshold
+        otherUsageTime = 0;
+
+        if(timePeriod.equals("Weekly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_WEEK;
+        else if (timePeriod.equals("Monthly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_MONTH;
+        else
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
+
+        // Recompute the total usage time
+        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
+            totalUsageTime += appUsageInfo.getUsageTimeInMillis();
+        }
+
+        totalScreenOffTime = periodMillis - totalUsageTime;
+
+        if (usage_CHBX_screenOff.isChecked() && totalScreenOffTime > 0) {
+            entries.add(new PieEntry(totalScreenOffTime, "Screen Off"));
+        }
+
+        // Accumulate and categorize small usage times into "Other"
+        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
+            double usagePercentage = (double) appUsageInfo.getUsageTimeInMillis() / totalUsageTime;
+            if (usagePercentage < thresholdPercentage) { // Less than 1% usage
+                otherUsageTime += appUsageInfo.getUsageTimeInMillis();
+            } else {
+                entries.add(new PieEntry(appUsageInfo.getUsageTimeInMillis(), appUsageInfo.getAppName()));
+
+            }
+        }
+
+        // Add "Other" category if it exists
+        if (otherUsageTime > 0) {
+            entries.add(new PieEntry(otherUsageTime, "Other"));
+        }
+
+        // Sort entries by value (descending order)
+        entries.sort((e1, e2) -> Float.compare(e2.getValue(), e1.getValue()));
+
+        // Apply the sorted entries to the PieDataSet and refresh the chart
+        PieDataSet dataSet = new PieDataSet(entries, "App Usage");
+        dataSet.setColors(getCustomColors()); // Ensure colors are correctly applied
         PieData data = new PieData(dataSet);
         data.setDrawValues(true);
         data.setValueTextSize(12f);
@@ -214,9 +297,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    private void hideCardView() {
+        if (cardViewLayout != null) {
+            cardViewLayout.setVisibility(View.GONE);
+        }
+    }
+
+    private void clearPieChartHighlight() {
+        if (usage_CRT_piechart != null) {
+            usage_CRT_piechart.highlightValues(null); // Clears all highlights
+        }
+    }
+
+
     private void findViews() {
         usage_CRT_piechart = findViewById(R.id.usage_CRT_piechart);
         usage_SPN_timeSelector =findViewById(R.id.usage_SPN_timeSelector);
+        usage_CHBX_screenOff = findViewById(R.id.usage_CHBX_screenOff);
+        usage_BTN_limit = findViewById(R.id.usage_BTN_limit);
         LayoutInflater inflater = LayoutInflater.from(this);
         cardViewLayout = inflater.inflate(R.layout.card_app_usage,null,false);
         usage_CRD_cardContainer = findViewById(R.id.usage_CRD_cardContainer);
@@ -225,7 +323,29 @@ public class MainActivity extends AppCompatActivity {
         card_IMG_icon = cardViewLayout.findViewById(R.id.card_IMG_icon);
         card_LBL_name = cardViewLayout.findViewById(R.id.card_LBL_name);
         card_LBL_usage = cardViewLayout.findViewById(R.id.card_LBL_usage);
-
-
+    }
+    private int[] getCustomColors(){
+        return new int[] {
+                ContextCompat.getColor(this, R.color.orange),
+                ContextCompat.getColor(this, R.color.brown),
+                ContextCompat.getColor(this, R.color.blue),
+                ContextCompat.getColor(this, R.color.green),
+                ContextCompat.getColor(this, R.color.amber),
+                ContextCompat.getColor(this, R.color.purple),
+                ContextCompat.getColor(this, R.color.light_blue),
+                ContextCompat.getColor(this, R.color.pink),
+                ContextCompat.getColor(this, R.color.light_green),
+                ContextCompat.getColor(this, R.color.deep_orange),
+                ContextCompat.getColor(this, R.color.deep_purple),
+                ContextCompat.getColor(this, R.color.cyan),
+                ContextCompat.getColor(this, R.color.forest_green),
+                ContextCompat.getColor(this, R.color.yellow),
+                ContextCompat.getColor(this, R.color.indigo),
+                ContextCompat.getColor(this, R.color.teal),
+                ContextCompat.getColor(this, R.color.blue_grey),
+                ContextCompat.getColor(this, R.color.red),
+                ContextCompat.getColor(this, R.color.dark_pink),
+                ContextCompat.getColor(this, R.color.dark_brown),
+        };
     }
 }

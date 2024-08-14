@@ -41,58 +41,6 @@ public class AppUsageData {
         return !(appList == null || appList.isEmpty());
     }
 
-    /*public List<AppUsageInfo> getAppUsageStats(String timePeriod) {
-        long time = System.currentTimeMillis();
-        long startTime;
-        if(timePeriod.equals("Weekly"))
-            startTime = time - AppUsageData.TOTAL_MILLIS_IN_WEEK;
-        else if(timePeriod.equals("Monthly"))
-            startTime = time - AppUsageData.TOTAL_MILLIS_IN_MONTH;
-        else
-            startTime = time - AppUsageData.TOTAL_MILLIS_IN_MONTH;
-
-        List<UsageStats> usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, time);
-
-        List<AppUsageInfo> appUsageInfoList = new ArrayList<>();
-        Set<String> uniqueApps = new HashSet<>();
-
-        if (usageStatsList != null && !usageStatsList.isEmpty()) {
-            for (UsageStats usageStats : usageStatsList) {
-                if (usageStats.getTotalTimeInForeground() > 0) {
-                    String packageName = usageStats.getPackageName();
-                    if (!uniqueApps.contains(packageName)) {
-                        uniqueApps.add(packageName);
-
-                        String appName;
-                        Drawable appIcon;
-                        try {
-                            ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
-                            appName = packageManager.getApplicationLabel(appInfo).toString();
-                            appIcon = packageManager.getApplicationIcon(appInfo);
-                        } catch (PackageManager.NameNotFoundException e) {
-                            appName = packageName;
-                            appIcon = context.getDrawable(android.R.drawable.sym_def_app_icon);
-                        }
-
-                        long usageTimeInMillis = usageStats.getTotalTimeInForeground();
-                        appUsageInfoList.add(new AppUsageInfo(appName, appIcon, usageTimeInMillis));
-                    }
-                }
-            }
-        }
-
-        // Sort the list by usage time in descending order
-        Collections.sort(appUsageInfoList, new Comparator<AppUsageInfo>() {
-            @Override
-            public int compare(AppUsageInfo o1, AppUsageInfo o2) {
-                return Long.compare(o2.getUsageTimeInMillis(), o1.getUsageTimeInMillis());
-            }
-        });
-
-        return appUsageInfoList;
-    }
-    */
-
     public List<AppUsageInfo> getAppUsageStats(String timePeriod) {
         long time = System.currentTimeMillis();
         long startTime;
