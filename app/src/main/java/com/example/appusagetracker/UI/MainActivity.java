@@ -1,6 +1,7 @@
 package com.example.appusagetracker.UI;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatSpinner;
 import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 
@@ -28,7 +29,10 @@ import android.provider.Settings;
 import android.text.Layout;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,10 +45,16 @@ public class MainActivity extends AppCompatActivity {
     private ShapeableImageView card_IMG_icon;
     private MaterialTextView card_LBL_name;
     private MaterialTextView card_LBL_usage;
+    private AppCompatSpinner usage_SPN_timeSelector;
+
+
+
+
     private AppUsageData appUsageData;
     private long otherUsageTime = 0;
     private long totalScreenOffTime=0;
-    private final long TOTAL_MILLIS_IN_DAY = 86400000;
+    private long periodMillis;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,13 +62,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         appUsageData = new AppUsageData(this);
         findViews();
+        handleSpinner();
 
         setupPieChart();
 
         if (!appUsageData.hasUsageStatsPermission()) {
             startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
         } else {
-            loadPieChartData();
+            loadPieChartData("Daily");
         }
 
         usage_CRT_piechart.setOnChartValueSelectedListener(new OnChartValueSelectedListener(){
@@ -76,9 +87,36 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void handleSpinner() {
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.time_period_options, R.layout.spinner_item_dropdown);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        usage_SPN_timeSelector.setAdapter(adapter);
+        usage_SPN_timeSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String selectedItem = parent.getItemAtPosition(position).toString();
+                loadPieChartData(selectedItem);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Do nothing
+            }
+        });
+    }
+
     private void showCardView(PieEntry entry) {
         String selectedAppName = entry.getLabel();
         AppUsageData.AppUsageInfo selectedAppInfo = null;
+
+        String timePeriod = usage_SPN_timeSelector.getSelectedItem().toString();
+        if (timePeriod.equals("Weekly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_WEEK;
+        else if (timePeriod.equals("Monthly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_MONTH;
+        else
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
 
         if("Other".equals(selectedAppName)){
             selectedAppInfo = new AppUsageData.AppUsageInfo();
@@ -94,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         }
         else
         {
-            for (AppUsageData.AppUsageInfo appUsageInfo : appUsageData.getAppUsageStats()) {
+            for (AppUsageData.AppUsageInfo appUsageInfo : appUsageData.getAppUsageStats(timePeriod)) {
                 if (appUsageInfo.getAppName().equals(selectedAppName)) {
                     selectedAppInfo = appUsageInfo;
                     break;
@@ -104,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
         if (selectedAppInfo != null) {
             usage_CRD_cardContainer.setVisibility(View.VISIBLE);
             card_LBL_name.setText(selectedAppInfo.getAppName()); // Correct name
-            card_LBL_usage.setText("Time: " + selectedAppInfo.getFormattedUsageTime());
+            card_LBL_usage.setText("Time: " + selectedAppInfo.getFormattedUsageTime(periodMillis));
             card_IMG_icon.setImageDrawable(selectedAppInfo.getAppIcon()); // Correct icon
             cardViewLayout.setVisibility(View.VISIBLE);
         }
@@ -125,17 +163,26 @@ public class MainActivity extends AppCompatActivity {
         usage_CRT_piechart.setHighlightPerTapEnabled(true);
     }
 
-    private void loadPieChartData() {
-        List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats();
+    private void loadPieChartData(String timePeriod) {
+        List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats(timePeriod);
         ArrayList<PieEntry> entries = new ArrayList<>();
         long totalUsageTime = 0;
         double thresholdPercentage = 0.01; // 1% threshold
+        otherUsageTime = 0;
+
+        if(timePeriod.equals("Weekly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_WEEK;
+        else if (timePeriod.equals("Monthly"))
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_MONTH;
+        else
+            periodMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
 
         // Calculate total usage time
         for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
             totalUsageTime += appUsageInfo.getUsageTimeInMillis();
         }
 
+        totalScreenOffTime = periodMillis - totalUsageTime;
         if(totalScreenOffTime > 0)
             entries.add(new PieEntry(totalScreenOffTime, "Screen Off"));
 
@@ -169,6 +216,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void findViews() {
         usage_CRT_piechart = findViewById(R.id.usage_CRT_piechart);
+        usage_SPN_timeSelector =findViewById(R.id.usage_SPN_timeSelector);
         LayoutInflater inflater = LayoutInflater.from(this);
         cardViewLayout = inflater.inflate(R.layout.card_app_usage,null,false);
         usage_CRD_cardContainer = findViewById(R.id.usage_CRD_cardContainer);
@@ -177,6 +225,7 @@ public class MainActivity extends AppCompatActivity {
         card_IMG_icon = cardViewLayout.findViewById(R.id.card_IMG_icon);
         card_LBL_name = cardViewLayout.findViewById(R.id.card_LBL_name);
         card_LBL_usage = cardViewLayout.findViewById(R.id.card_LBL_usage);
+
 
     }
 }

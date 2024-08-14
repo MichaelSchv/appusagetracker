@@ -8,19 +8,31 @@
     android:background="@color/white">
 
     <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/usage_stats_title"
+        android:id="@+id/usage_LBL_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="App Usage Statistics"
         android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/black"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="16dp"/>
+
+    <androidx.appcompat.widget.AppCompatSpinner
+        android:id="@+id/usage_SPN_timeSelector"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/usage_LBL_title"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:spinnerMode="dropdown"
+        android:entries="@array/time_period_options" />
 
     <com.github.mikephil.charting.charts.PieChart
         android:id="@+id/usage_CRT_piechart"
         android:layout_width="match_parent"
         android:layout_height="400dp"
-        android:layout_below="@id/usage_stats_title"
+        android:layout_below="@id/usage_SPN_timeSelector"
         android:layout_marginTop="16dp"
         android:padding="10dp"/>
 
