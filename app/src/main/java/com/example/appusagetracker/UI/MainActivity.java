@@ -121,9 +121,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
     }
 
@@ -183,61 +181,6 @@ public class MainActivity extends AppCompatActivity {
         usage_CRT_piechart.getLegend().setEnabled(false);
         usage_CRT_piechart.setHighlightPerTapEnabled(true);
     }
-
-    /*private void loadPieChartData(String timePeriod) {
-        List<AppUsageData.AppUsageInfo> appUsageInfoList = appUsageData.getAppUsageStats(timePeriod);
-        ArrayList<PieEntry> entries = new ArrayList<>();
-        long totalUsageTime = 0;
-        double thresholdPercentage = 0.01; // 1% threshold
-        otherUsageTime = 0;
-
-        if(timePeriod.equals("Weekly"))
-            periodMillis = AppUsageData.TOTAL_MILLIS_IN_WEEK;
-        else if (timePeriod.equals("Monthly"))
-            periodMillis = AppUsageData.TOTAL_MILLIS_IN_MONTH;
-        else
-            periodMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
-
-        // Calculate total usage time
-        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
-            totalUsageTime += appUsageInfo.getUsageTimeInMillis();
-        }
-
-        totalScreenOffTime = periodMillis - totalUsageTime;
-        if(totalScreenOffTime > 0 && usage_CHBX_screenOff.isChecked())
-        {
-            entries.add(new PieEntry(totalScreenOffTime, "Screen Off"));
-        }
-
-        int[] colors = getCustomColors();
-        // Group small usage times into "Other"
-        for (AppUsageData.AppUsageInfo appUsageInfo : appUsageInfoList) {
-            double usagePercentage = (double) appUsageInfo.getUsageTimeInMillis() / totalUsageTime;
-            if (usagePercentage < thresholdPercentage) {
-                otherUsageTime += appUsageInfo.getUsageTimeInMillis();
-            } else {
-                entries.add(new PieEntry(appUsageInfo.getUsageTimeInMillis(), appUsageInfo.getAppName()));
-            }
-        }
-
-        // Add the "Other" category if necessary
-        if (otherUsageTime > 0) {
-            entries.add(new PieEntry(otherUsageTime, "Other"));
-        }
-
-        entries.sort((e1,e2)-> Float.compare(e2.getValue(), e1.getValue()));
-
-        // Create the PieDataSet and PieData
-        PieDataSet dataSet = new PieDataSet(entries, "App Usage");
-        dataSet.setColors(colors);
-        PieData data = new PieData(dataSet);
-        data.setDrawValues(true);
-        data.setValueTextSize(12f);
-        data.setValueTextColor(android.R.color.black);
-
-        usage_CRT_piechart.setData(data);
-        usage_CRT_piechart.invalidate(); // Refresh the chart
-    }*/
 
     private void loadPieChartData(String timePeriod) {
         // Fetch fresh app usage data for the selected time period

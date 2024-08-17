@@ -173,5 +173,7 @@ public class AppUsageData {
         public Drawable getAppIcon() {
             return appIcon;
         }
+
+
     }
 }
