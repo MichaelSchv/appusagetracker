@@ -50,15 +50,17 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
 
         int[] limits = getUsageLimit(app.getAppName());
 
-        if (limits[0] > 0 && limits[1] > 0 && limits[2] > 0) // The app is already limited
+        if (limits[0] > 0 || limits[1] > 0 || limits[2] > 0) // The app is already limited
         {
             holder.cardLimit_BTN_limit.setText("Adjust Limit");
             holder.cardLimit_BTN_unlimit.setVisibility(View.VISIBLE);  // Show the "Unlimit" button
-            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), limits));
+            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), limits, position));
 
             holder.cardLimit_BTN_unlimit.setOnClickListener(v -> {
+
                 // Remove the limit from SharedPreferences
                 removeUsageLimit(app.getAppName());
+
                 // Update the UI after unlimiting
                 holder.cardLimit_BTN_limit.setText("Limit");
                 holder.cardLimit_BTN_unlimit.setVisibility(View.GONE);
@@ -68,12 +70,12 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
             // The app is not limited
             holder.cardLimit_BTN_limit.setText("Limit");
             holder.cardLimit_BTN_unlimit.setVisibility(View.GONE);  // Hide the "Unlimit" button
-            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), null));
+            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), null,position));
         }
 
     }
 
-    private void showSetLimitDialog(Context context, final String appName, int[] limits) {
+    private void showSetLimitDialog(Context context, final String appName, int[] limits, int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Set daily usage limit for " + appName);
 
@@ -97,7 +99,7 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
             int seconds = secondsInput.getText().toString().isEmpty() ? 0 : Integer.parseInt(secondsInput.getText().toString());
 
             saveUsageLimit(appName, hours, minutes, seconds);
-            Log.d("LIMITT", "Limit set for " + appName + ": " + hours + "h " + minutes + "m " + seconds + "s");
+            notifyItemChanged(position);
         });
 
         builder.setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss());
@@ -143,63 +145,6 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
     }
 
 
-    /*private void showSetLimitDialog(Context context, final String appName, int[] limits) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Set daily usage limit for " + appName);
-
-        final View customLayout = LayoutInflater.from(context).inflate(R.layout.dialog_set_limit, null);
-        builder.setView(customLayout);
-
-        builder.setPositiveButton("Set", (dialogInterface, i) -> {
-            // The dialog automatically closes here, so input validation
-            // would need to be done before this point.
-        });
-
-        builder.setNegativeButton("Cancel", (dialogInterface, i) -> dialogInterface.dismiss());
-
-        AlertDialog dialog = builder.create();
-
-        // Validate input before allowing dialog to close
-        dialog.setOnShowListener(dialogInterface -> {
-            Button positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-            positiveButton.setEnabled(false);
-
-            EditText hoursInput = customLayout.findViewById(R.id.limit_hours);
-            EditText minutesInput = customLayout.findViewById(R.id.limit_minutes);
-            EditText secondsInput = customLayout.findViewById(R.id.limit_seconds);
-
-            TextWatcher inputWatcher = new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    String hoursStr = hoursInput.getText().toString();
-                    String minutesStr = minutesInput.getText().toString();
-                    String secondsStr = secondsInput.getText().toString();
-
-                    int hours = hoursStr.isEmpty() ? 0 : Integer.parseInt(hoursStr);
-                    int minutes = minutesStr.isEmpty() ? 0 : Integer.parseInt(minutesStr);
-                    int seconds = secondsStr.isEmpty() ? 0 : Integer.parseInt(secondsStr);
-
-                    boolean isValid = hours >= 0 && hours <= 23 &&
-                            minutes >= 0 && minutes <= 59 &&
-                            seconds >= 0 && seconds <= 59;
-
-                    positiveButton.setEnabled(isValid);
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {}
-            };
-
-            hoursInput.addTextChangedListener(inputWatcher);
-            minutesInput.addTextChangedListener(inputWatcher);
-            secondsInput.addTextChangedListener(inputWatcher);
-        });
-
-        dialog.show();
-    }*/
 
     @Override
     public int getItemCount() {
@@ -207,6 +152,7 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
     }
 
     private void saveUsageLimit(String appName, int hours, int minutes, int seconds) {
+        Log.d("prefs", prefs.toString());
         SharedPreferences.Editor editor = prefs.edit();
         editor.putInt(appName + "_hours", hours);
         editor.putInt(appName + "_minutes", minutes);
