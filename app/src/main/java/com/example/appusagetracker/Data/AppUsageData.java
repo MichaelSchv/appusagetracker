@@ -6,17 +6,12 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 
-import com.example.appusagetracker.UI.MainActivity;
-
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class AppUsageData {
@@ -41,7 +36,7 @@ public class AppUsageData {
         return !(appList == null || appList.isEmpty());
     }
 
-    public List<AppUsageInfo> getAppUsageStats(String timePeriod) {
+    /*public List<AppUsageInfo> getAppUsageStats(String timePeriod) {
         long time = System.currentTimeMillis();
         long startTime;
         long intervalMillis;
@@ -108,20 +103,84 @@ public class AppUsageData {
         return appUsageInfoList;
     }
 
+*/
+    public List<AppUsageInfo> getAppUsageStats(String timePeriod) {
+        long time = System.currentTimeMillis();
+        long startTime;
+        long intervalMillis;
+
+        if (timePeriod.equals("Weekly")) {
+            intervalMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
+            startTime = time - AppUsageData.TOTAL_MILLIS_IN_WEEK;
+        } else if (timePeriod.equals("Monthly")) {
+            intervalMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
+            startTime = time - AppUsageData.TOTAL_MILLIS_IN_MONTH;
+        } else {
+            // Default to daily
+            intervalMillis = AppUsageData.TOTAL_MILLIS_IN_DAY;
+            startTime = time - AppUsageData.TOTAL_MILLIS_IN_DAY;
+        }
+
+        List<AppUsageInfo> appUsageInfoList = new ArrayList<>();
+        Map<String, AppUsageInfo> appUsageMap = new HashMap<>();
+
+        for (long dayStart = startTime; dayStart < time; dayStart += intervalMillis) {
+            long dayEnd = dayStart + intervalMillis;
+
+            List<UsageStats> usageStatsList = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd);
+
+            if (usageStatsList != null && !usageStatsList.isEmpty()) {
+                for (UsageStats usageStats : usageStatsList) {
+                    if (usageStats.getTotalTimeInForeground() > 0) {
+                        String packageName = usageStats.getPackageName();
+
+                        AppUsageInfo existingAppUsageInfo = appUsageMap.get(packageName);
+                        if (existingAppUsageInfo == null) {
+                            String appName;
+                            Drawable appIcon;
+                            try {
+                                ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                                appName = packageManager.getApplicationLabel(appInfo).toString();
+                                appIcon = packageManager.getApplicationIcon(appInfo);
+                            } catch (PackageManager.NameNotFoundException e) {
+                                appName = packageName;
+                                appIcon = context.getDrawable(android.R.drawable.sym_def_app_icon);
+                            }
+
+                            long usageTimeInMillis = usageStats.getTotalTimeInForeground();
+                            AppUsageInfo newAppUsageInfo = new AppUsageInfo(appName, packageName, appIcon, usageTimeInMillis);
+                            appUsageMap.put(packageName, newAppUsageInfo);
+                        } else {
+                            existingAppUsageInfo.setUsageTimeInMillis(
+                                    existingAppUsageInfo.getUsageTimeInMillis() + usageStats.getTotalTimeInForeground());
+                        }
+                    }
+                }
+            }
+        }
+
+        appUsageInfoList.addAll(appUsageMap.values());
+        Collections.sort(appUsageInfoList, (o1, o2) -> Long.compare(o2.getUsageTimeInMillis(), o1.getUsageTimeInMillis()));
+
+        return appUsageInfoList;
+    }
 
     public static class AppUsageInfo {
         private String appName;
+        private String packageName;
         private long usageTimeInMillis;
         private Drawable appIcon;
 
-        public AppUsageInfo(String appName, Drawable appIcon, long usageTimeInMillis) {
+        public AppUsageInfo(String appName, String packageName, Drawable appIcon, long usageTimeInMillis) {
             this.appName = appName;
+            this.packageName = packageName;
             this.usageTimeInMillis = usageTimeInMillis;
             this.appIcon = appIcon;
         }
 
         public AppUsageInfo() {
             this.appName = null;
+            this.packageName = null;
             this.usageTimeInMillis = 0;
             this.appIcon = null;
         }
@@ -145,9 +204,38 @@ public class AppUsageData {
             return appName;
         }
 
+        public String getPackageName() {
+            return packageName;
+        }
+
         public long getUsageTimeInMillis() {
             return usageTimeInMillis;
         }
+
+        public String getPackageNameByAppName(Context context, String appName) {
+            PackageManager packageManager = context.getPackageManager();
+            List<ApplicationInfo> installedApplications = packageManager.getInstalledApplications(PackageManager.GET_META_DATA);
+
+            for (ApplicationInfo appInfo : installedApplications) {
+                String currentAppName = packageManager.getApplicationLabel(appInfo).toString();
+                if (currentAppName.equalsIgnoreCase(appName)) {
+                    return appInfo.packageName;
+                }
+            }
+            return null;
+        }
+
+        public String getAppNameByPackage(Context context, String packageName) {
+            PackageManager packageManager = context.getPackageManager();
+            try {
+                ApplicationInfo applicationInfo = packageManager.getApplicationInfo(packageName, 0);
+                return packageManager.getApplicationLabel(applicationInfo).toString();
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+                return packageName; // If the package name is not found, return the package name itself
+            }
+        }
+
 
         public String getFormattedUsageTime(long periodMillis) {
             if(periodMillis == AppUsageData.TOTAL_MILLIS_IN_DAY){

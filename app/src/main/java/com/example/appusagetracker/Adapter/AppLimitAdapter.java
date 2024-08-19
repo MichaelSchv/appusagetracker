@@ -41,7 +41,33 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
         return new ViewHolder(view);
     }
 
-    @Override
+    public void onBindViewHolder(@NonNull AppLimitAdapter.ViewHolder holder, int position) {
+        final AppUsageData.AppUsageInfo app = appList.get(position);
+        holder.cardLimit_IMG_icon.setImageDrawable(app.getAppIcon());
+        holder.cardLimit_LBL_name.setText(app.getAppName());
+
+        String packageName = app.getPackageName(); // Use packageName instead of appName
+        int[] limits = getUsageLimit(packageName);
+
+        if (limits[0] > 0 || limits[1] > 0 || limits[2] > 0) {
+            holder.cardLimit_BTN_limit.setText("Adjust Limit");
+            holder.cardLimit_BTN_unlimit.setVisibility(View.VISIBLE); // Show the "Unlimit" button
+            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), limits, position));
+
+            holder.cardLimit_BTN_unlimit.setOnClickListener(v -> {
+                removeUsageLimit(packageName);
+                holder.cardLimit_BTN_limit.setText("Limit");
+                holder.cardLimit_BTN_unlimit.setVisibility(View.GONE);
+                notifyItemChanged(holder.getAdapterPosition());
+            });
+        } else {
+            holder.cardLimit_BTN_limit.setText("Limit");
+            holder.cardLimit_BTN_unlimit.setVisibility(View.GONE); // Hide the "Unlimit" button
+            holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), null, position));
+        }
+    }
+
+    /*@Override
     public void onBindViewHolder(@NonNull AppLimitAdapter.ViewHolder holder, int position) {
         final AppUsageData.AppUsageInfo app = appList.get(position);
         holder.cardLimit_IMG_icon.setImageDrawable(app.getAppIcon());
@@ -73,7 +99,7 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
             holder.cardLimit_BTN_limit.setOnClickListener(v -> showSetLimitDialog(v.getContext(), app.getAppName(), null,position));
         }
 
-    }
+    }*/
 
     private void showSetLimitDialog(Context context, final String appName, int[] limits, int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -98,7 +124,10 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
             int minutes = minutesInput.getText().toString().isEmpty() ? 0 : Integer.parseInt(minutesInput.getText().toString());
             int seconds = secondsInput.getText().toString().isEmpty() ? 0 : Integer.parseInt(secondsInput.getText().toString());
 
-            saveUsageLimit(appName, hours, minutes, seconds);
+            AppUsageData.AppUsageInfo appInfo = new AppUsageData.AppUsageInfo();
+            String packageName = appInfo.getPackageNameByAppName(context,appName);
+            Log.d("AppLimitAdapter", "Package name for " + appName + " is: " + packageName);
+            saveUsageLimit(packageName, hours, minutes, seconds);
             notifyItemChanged(position);
         });
 
@@ -151,19 +180,20 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
         return appList.size();
     }
 
-    private void saveUsageLimit(String appName, int hours, int minutes, int seconds) {
+
+    /*private void saveUsageLimit(String packageName, int hours, int minutes, int seconds) {
         Log.d("prefs", prefs.toString());
         SharedPreferences.Editor editor = prefs.edit();
-        editor.putInt(appName + "_hours", hours);
-        editor.putInt(appName + "_minutes", minutes);
-        editor.putInt(appName + "_seconds", seconds);
+        editor.putInt(packageName + "_hours", hours);
+        editor.putInt(packageName + "_minutes", minutes);
+        editor.putInt(packageName + "_seconds", seconds);
         editor.apply(); // Apply changes asynchronously
     }
 
-    private int[] getUsageLimit(String appName) {
-        int hours = prefs.getInt(appName + "_hours", 0);
-        int minutes = prefs.getInt(appName + "_minutes", 0);
-        int seconds = prefs.getInt(appName + "_seconds", 0);
+    private int[] getUsageLimit(String packageName) {
+        int hours = prefs.getInt(packageName + "_hours", 0);
+        int minutes = prefs.getInt(packageName + "_minutes", 0);
+        int seconds = prefs.getInt(packageName + "_seconds", 0);
         return new int[]{hours, minutes, seconds};
     }
 
@@ -173,7 +203,34 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
         editor.remove(appName + "_minutes");
         editor.remove(appName + "_seconds");
         editor.apply();
+    }*/
+
+    private void saveUsageLimit(String packageName, int hours, int minutes, int seconds) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putInt(packageName + "_hours", hours);
+        editor.putInt(packageName + "_minutes", minutes);
+        editor.putInt(packageName + "_seconds", seconds);
+        long totalLimitInMillis = (hours * 3600 + minutes * 60 + seconds) * 1000;
+        editor.putLong(packageName + "_limitMillis", totalLimitInMillis);
+        editor.apply();
     }
+
+    private int[] getUsageLimit(String packageName) {
+        int hours = prefs.getInt(packageName + "_hours", 0);
+        int minutes = prefs.getInt(packageName + "_minutes", 0);
+        int seconds = prefs.getInt(packageName + "_seconds", 0);
+        Log.d("AppLimitAdapter", "Retrieved limit for " + packageName + ": " + hours + "h " + minutes + "m " + seconds + "s");
+        return new int[]{hours, minutes, seconds};
+    }
+
+    private void removeUsageLimit(String packageName) {
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.remove(packageName + "_hours");
+        editor.remove(packageName + "_minutes");
+        editor.remove(packageName + "_seconds");
+        editor.apply();
+    }
+
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 

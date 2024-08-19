@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.appusagetracker.Data.AppUsageData;
 import com.example.appusagetracker.R;
+import com.example.appusagetracker.Service.AppUsageLimitService;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.PieData;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
         findViews();
         handleSpinner();
         setupPieChart();
+        startAppUsageLimitService();
 
         usage_BTN_limit.setOnClickListener(v->{
             Intent intent = new Intent(MainActivity.this, LimitActivity.class);
@@ -104,6 +106,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private void startAppUsageLimitService() {
+        Intent serviceIntent = new Intent(this, AppUsageLimitService.class);
+        startService(serviceIntent);
     }
 
     private void handleSpinner() {
