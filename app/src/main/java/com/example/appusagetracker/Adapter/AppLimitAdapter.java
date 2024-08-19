@@ -228,6 +228,11 @@ public class AppLimitAdapter extends RecyclerView.Adapter<AppLimitAdapter.ViewHo
         editor.remove(packageName + "_hours");
         editor.remove(packageName + "_minutes");
         editor.remove(packageName + "_seconds");
+        editor.remove(packageName + "_limitMillis");
+        editor.remove(packageName + "_snoozeEnd");
+        editor.remove(packageName + "_remainingMillis");
+        editor.remove(packageName + "_startTime");
+        editor.remove(packageName + "_muteEnd");
         editor.apply();
     }
 

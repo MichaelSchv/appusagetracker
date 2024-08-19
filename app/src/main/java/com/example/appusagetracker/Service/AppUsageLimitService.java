@@ -71,6 +71,7 @@ public class AppUsageLimitService extends Service {
                 Log.d(TAG, packageName + " is snoozed until " + snoozeEndTime);
                 continue;
             }
+            else
 
             if (currentTime < muteEndTime) {
                 Log.d(TAG, packageName + " is muted until " + muteEndTime);
